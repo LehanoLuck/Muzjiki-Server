@@ -1,0 +1,56 @@
+# Build results
+
+bin/
+obj/
+
+# User-specific files
+
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+# Visual Studio files
+
+.vs/
+.vscode/
+
+# Rider
+
+.idea/
+
+# Logs
+
+*.log
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Publish output
+
+publish/
+out/
+
+# NuGet
+
+*.nupkg
+packages/
+
+# Environment files
+
+.env
+
+# Test results
+
+TestResults/
+
+# Temporary files
+
+*.tmp
+*.temp
+
+# Coverage
+
+coverage/

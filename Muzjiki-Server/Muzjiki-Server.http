@@ -1,0 +1,6 @@
+@Muzjiki_Server_HostAddress = http://localhost:5193
+
+GET {{Muzjiki_Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
