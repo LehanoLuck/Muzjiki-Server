@@ -57,11 +57,7 @@ public class MatchmakingManager
                     continue;
                 }
 
-                return new GameSession
-                {
-                    Player1ConnectionId = player1Id,
-                    Player2ConnectionId = player2Id
-                };
+                return new GameSession([player1Id, player2Id]);
             }
 
             return null;

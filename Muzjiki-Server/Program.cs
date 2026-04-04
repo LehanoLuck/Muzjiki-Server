@@ -59,7 +59,7 @@ app.Map("/ws", async context =>
                     if (gameSession is not null)
                     {
                         gameSessions.Add(gameSession);
-                        Console.WriteLine($"Match created: {gameSession.Player1ConnectionId} vs {gameSession.Player2ConnectionId}");
+                        Console.WriteLine($"Match created: {string.Join(" vs ", gameSession.PlayerConnectionIds)}");
                     }
 
                     break;
@@ -84,8 +84,7 @@ app.Map("/ws", async context =>
     {
         matchmakingManager.Remove(connectionId);
         connectionManager.Remove(connectionId);
-        gameSessions.RemoveAll(session =>
-            session.Player1ConnectionId == connectionId || session.Player2ConnectionId == connectionId);
+        gameSessions.RemoveAll(session => session.PlayerConnectionIds.Contains(connectionId));
 
         await TryCloseSocketAsync(socket);
         socket.Dispose();
