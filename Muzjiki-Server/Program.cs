@@ -10,7 +10,7 @@ app.UseWebSockets();
 
 var connectionManager = new ConnectionManager();
 var matchmakingManager = new MatchmakingManager();
-var gameSessions = new List<GameSession>();
+var gameLoopService = new GameLoopService(connectionManager, matchmakingManager);
 var jsonOptions = new JsonSerializerOptions
 {
     PropertyNameCaseInsensitive = true
@@ -47,29 +47,7 @@ app.Map("/ws", async context =>
                 continue;
             }
 
-            switch (envelope.Type)
-            {
-                case "QueueQuickMatch":
-                    var queued = matchmakingManager.EnqueueQuickMatch(connectionId);
-                    Console.WriteLine(queued
-                        ? $"Player queued: {connectionId}"
-                        : $"Player already in queue: {connectionId}");
-
-                    var gameSession = matchmakingManager.TryCreateMatch(connectionManager);
-                    if (gameSession is not null)
-                    {
-                        gameSessions.Add(gameSession);
-                        Console.WriteLine($"Match created: {string.Join(" vs ", gameSession.PlayerConnectionIds)}");
-                    }
-
-                    break;
-                case "Hello":
-                    Console.WriteLine($"Hello from: {connectionId}");
-                    break;
-                default:
-                    Console.WriteLine($"Unknown envelope type: {envelope.Type}");
-                    break;
-            }
+            await gameLoopService.HandleEnvelopeAsync(connectionId, envelope, context.RequestAborted);
         }
     }
     catch (OperationCanceledException)
@@ -82,9 +60,8 @@ app.Map("/ws", async context =>
     }
     finally
     {
-        matchmakingManager.Remove(connectionId);
+        gameLoopService.HandleDisconnect(connectionId);
         connectionManager.Remove(connectionId);
-        gameSessions.RemoveAll(session => session.PlayerConnectionIds.Contains(connectionId));
 
         await TryCloseSocketAsync(socket);
         socket.Dispose();
