@@ -137,15 +137,24 @@ public class GameLoopService
     private static Task RunStepDraw(GameState state, Guid actorId)
     {
         var player = state.Players[actorId];
-        if (player.Deck.Count <= 0)
+        var activeDeck = GetActiveDeck(player);
+        if (activeDeck.Count <= 0)
         {
             return Task.CompletedTask;
         }
 
-        var topCard = player.Deck[0];
-        player.Deck.RemoveAt(0);
+        var topCard = activeDeck[0];
+        activeDeck.RemoveAt(0);
         player.Hand.Add(topCard);
         return Task.CompletedTask;
+    }
+
+
+    private static List<CardState> GetActiveDeck(PlayerGameState player)
+    {
+        return player.ActiveCombatDeck == CombatDeckType.Secondary
+            ? player.SecondaryCombatDeck
+            : player.PrimaryCombatDeck;
     }
 
     private static void RunStepPlay(GameState state, Guid actorId)
@@ -211,9 +220,14 @@ public class GameLoopService
                 {
                     ConnectionId = playerId,
                     Health = opponent.Health,
+                    Stamina = opponent.Stamina,
+                    Strength = opponent.Strength,
+                    Speed = opponent.Speed,
+                    Energy = opponent.Energy,
                     HandCount = opponent.Hand.Count,
                     PlayZone = opponent.PlayZone.ToList(),
-                    DeckCount = opponent.Deck.Count,
+                    PrimaryDeckCount = opponent.PrimaryCombatDeck.Count,
+                    SecondaryDeckCount = opponent.SecondaryCombatDeck.Count,
                     DiscardCount = opponent.Discard.Count
                 };
             })
@@ -228,9 +242,14 @@ public class GameLoopService
             You = new PublicPlayerState
             {
                 Health = viewer.Health,
+                Stamina = viewer.Stamina,
+                Strength = viewer.Strength,
+                Speed = viewer.Speed,
+                Energy = viewer.Energy,
                 Hand = viewer.Hand.ToList(),
                 PlayZone = viewer.PlayZone.ToList(),
-                DeckCount = viewer.Deck.Count,
+                PrimaryDeckCount = viewer.PrimaryCombatDeck.Count,
+                SecondaryDeckCount = viewer.SecondaryCombatDeck.Count,
                 DiscardCount = viewer.Discard.Count
             },
             Opponents = opponents
