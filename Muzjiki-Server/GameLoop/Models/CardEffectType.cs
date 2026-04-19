@@ -7,9 +7,5 @@ public enum CardEffectType
     DealDamage,
     GainDefense,
     ReturnToHand,
-    Stun,
-    CaptureProgress,
-    MoveDistance,
-    Weaken,
-    RevealCards
+    Stun
 }

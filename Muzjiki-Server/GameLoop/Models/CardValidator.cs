@@ -7,11 +7,7 @@ public static class CardValidator
         CardEffectType.DrawCards,
         CardEffectType.DiscardCards,
         CardEffectType.DealDamage,
-        CardEffectType.GainDefense,
-        CardEffectType.CaptureProgress,
-        CardEffectType.MoveDistance,
-        CardEffectType.Weaken,
-        CardEffectType.RevealCards
+        CardEffectType.GainDefense
     ];
 
     private static readonly HashSet<CardEffectType> NonNumericEffects =
