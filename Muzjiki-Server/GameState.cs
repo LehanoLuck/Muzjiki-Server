@@ -22,6 +22,8 @@ public class GameState
     public int CurrentPlayerIndex { get; set; }
     public int TurnNumber { get; set; } = 1;
     public string Phase { get; set; } = "draw";
+    public bool IsGameOver { get; set; }
+    public Guid? WinnerId { get; set; }
 
     public Guid CurrentPlayerId => PlayerOrder[CurrentPlayerIndex];
 
@@ -112,6 +114,8 @@ public class PublicGameState
     public int TurnNumber { get; init; }
     public string Phase { get; init; } = string.Empty;
     public Guid CurrentPlayerId { get; init; }
+    public bool IsGameOver { get; init; }
+    public Guid? WinnerId { get; init; }
     public PublicPlayerState You { get; init; } = new();
     public IReadOnlyList<PublicOpponentState> Opponents { get; init; } = [];
 }
