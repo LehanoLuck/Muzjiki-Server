@@ -11,6 +11,14 @@ public enum CardClass
     Placeholder = 0
 }
 
+public enum TurnPhase
+{
+    Draw,
+    Play,
+    Resolve,
+    Finished
+}
+
 public class GameState
 {
     private static readonly Random Random = new();
@@ -113,7 +121,7 @@ public class PublicGameState
 {
     public Guid SessionId { get; init; }
     public int TurnNumber { get; init; }
-    public string Phase { get; init; } = string.Empty;
+    public TurnPhase Phase { get; init; }
     public Guid CurrentPlayerId { get; init; }
     public bool IsGameOver { get; init; }
     public Guid? WinnerId { get; init; }

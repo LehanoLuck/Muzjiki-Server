@@ -95,6 +95,17 @@ public class GameLoopService
         await BroadcastStateSyncAsync(gameSession.InitialState, EnvelopeTypes.GameStart, cancellationToken);
     }
 
+    private static bool IsActionAllowedInCurrentPhase(GameState state, string envelopeType)
+    {
+        return (state.Phase, envelopeType) switch
+        {
+            (TurnPhase.Draw, EnvelopeTypes.DrawCard) => true,
+            (TurnPhase.Play, EnvelopeTypes.PlayCard) => true,
+            (TurnPhase.Resolve, EnvelopeTypes.EndTurn) => true,
+            _ => false
+        };
+    }
+
     private async Task ExecuteTurnStepAsync(Guid actorId, string envelopeType, CancellationToken cancellationToken)
     {
         GameState? gameState;
@@ -110,6 +121,7 @@ public class GameLoopService
 
         if (gameState is null || gameState.IsGameOver || gameState.CurrentPlayerId != actorId)
         {
+            await BroadcastStateSyncAsync(gameState, EnvelopeTypes.GameStateSync, cancellationToken);
             return;
         }
 
