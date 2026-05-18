@@ -33,6 +33,9 @@ public class GameState
 
         var players = new Dictionary<Guid, PlayerGameState>();
 
+        var sharedEnergy = new SharedEnergyState();
+        sharedEnergy.InitializePlayers(playerConnectionIds, initialEnergy: 0);
+
         foreach (var connectionId in playerConnectionIds)
         {
             var (primaryDeck, secondaryDeck) = BuildDefaultDecks();
@@ -44,8 +47,6 @@ public class GameState
                 Stamina = 1,
                 Strength = 1,
                 Speed = 1,
-                // TODO: replace with finalized start-phase energy rule when game design is locked.
-                Energy = 0,
                 PrimaryCombatDeck = primaryDeck,
                 SecondaryCombatDeck = secondaryDeck,
                 ActiveCombatDeck = CombatDeckType.Primary,
@@ -59,7 +60,8 @@ public class GameState
         {
             SessionId = sessionId,
             PlayerOrder = playerConnectionIds.ToList().AsReadOnly(),
-            Players = players
+            Players = players,
+            SharedEnergy = sharedEnergy
         };
     }
 
@@ -90,7 +92,6 @@ public class PlayerGameState
     public int Stamina { get; set; }
     public int Strength { get; set; }
     public int Speed { get; set; }
-    public int Energy { get; set; }
     public List<CardState> PrimaryCombatDeck { get; set; } = [];
     public List<CardState> SecondaryCombatDeck { get; set; } = [];
     public CombatDeckType ActiveCombatDeck { get; set; } = CombatDeckType.Primary;
