@@ -24,7 +24,6 @@ public class GameState
     public string Phase { get; set; } = "draw";
     public bool IsGameOver { get; set; }
     public Guid? WinnerId { get; set; }
-    public SharedEnergyState SharedEnergy { get; init; } = new();
 
     public Guid CurrentPlayerId => PlayerOrder[CurrentPlayerIndex];
 
