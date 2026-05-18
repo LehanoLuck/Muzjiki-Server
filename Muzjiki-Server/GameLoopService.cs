@@ -11,6 +11,7 @@ public class GameLoopService
     private readonly Dictionary<Guid, GameState> _sessionStates = new();
     private readonly Dictionary<Guid, Guid> _playerToSession = new();
     private readonly object _sync = new();
+    private readonly CombatEngine _combatEngine = new();
 
     public GameLoopService(ConnectionManager connectionManager, MatchmakingManager matchmakingManager)
     {
@@ -90,8 +91,20 @@ public class GameLoopService
 
         Console.WriteLine($"Match created: {string.Join(" vs ", gameSession.PlayerConnectionIds)}");
 
-        await RunStepDraw(gameSession.InitialState, gameSession.InitialState.CurrentPlayerId);
+        _combatEngine.TryDrawCard(gameSession.InitialState, gameSession.InitialState.CurrentPlayerId);
+        gameSession.InitialState.Phase = TurnPhase.Play;
         await BroadcastStateSyncAsync(gameSession.InitialState, EnvelopeTypes.GameStart, cancellationToken);
+    }
+
+    private static bool IsActionAllowedInCurrentPhase(GameState state, string envelopeType)
+    {
+        return (state.Phase, envelopeType) switch
+        {
+            (TurnPhase.Draw, EnvelopeTypes.DrawCard) => true,
+            (TurnPhase.Play, EnvelopeTypes.PlayCard) => true,
+            (TurnPhase.Resolve, EnvelopeTypes.EndTurn) => true,
+            _ => false
+        };
     }
 
     private async Task ExecuteTurnStepAsync(Guid actorId, string envelopeType, CancellationToken cancellationToken)
@@ -107,85 +120,42 @@ public class GameLoopService
             }
         }
 
-        if (gameState is null || gameState.CurrentPlayerId != actorId)
+        if (gameState is null || gameState.IsGameOver || gameState.CurrentPlayerId != actorId)
         {
+            return;
+        }
+
+        if (!IsActionAllowedInCurrentPhase(gameState, envelopeType))
+        {
+            await BroadcastStateSyncAsync(gameState, EnvelopeTypes.GameStateSync, cancellationToken);
             return;
         }
 
         switch (envelopeType)
         {
             case EnvelopeTypes.DrawCard:
-                await RunStepDraw(gameState, actorId);
-                gameState.Phase = "play";
+                _combatEngine.TryDrawCard(gameState, actorId);
+                gameState.Phase = TurnPhase.Play;
                 break;
             case EnvelopeTypes.PlayCard:
-                RunStepPlay(gameState, actorId);
-                gameState.Phase = "resolve";
+                _combatEngine.TryPlayCard(gameState, actorId);
+                gameState.Phase = TurnPhase.Resolve;
                 break;
             case EnvelopeTypes.EndTurn:
-                RunStepResolve(gameState, actorId);
-                RunStepDiscard(gameState, actorId);
+                _combatEngine.ResolveAndDiscard(gameState, actorId);
+                _combatEngine.CheckGameEnd(gameState);
+                if (gameState.IsGameOver)
+                {
+                    gameState.Phase = TurnPhase.Finished;
+                    break;
+                }
                 AdvanceTurn(gameState);
-                await RunStepDraw(gameState, gameState.CurrentPlayerId);
-                gameState.Phase = "play";
+                _combatEngine.TryDrawCard(gameState, gameState.CurrentPlayerId);
+                gameState.Phase = TurnPhase.Play;
                 break;
         }
 
         await BroadcastStateSyncAsync(gameState, EnvelopeTypes.GameStateSync, cancellationToken);
-    }
-
-    private static Task RunStepDraw(GameState state, Guid actorId)
-    {
-        var player = state.Players[actorId];
-        var activeDeck = GetActiveDeck(player);
-        if (activeDeck.Count <= 0)
-        {
-            return Task.CompletedTask;
-        }
-
-        var topCard = activeDeck[0];
-        activeDeck.RemoveAt(0);
-        player.Hand.Add(topCard);
-        return Task.CompletedTask;
-    }
-
-
-    private static List<CardState> GetActiveDeck(PlayerGameState player)
-    {
-        return player.ActiveCombatDeck == CombatDeckType.Secondary
-            ? player.SecondaryCombatDeck
-            : player.PrimaryCombatDeck;
-    }
-
-    private static void RunStepPlay(GameState state, Guid actorId)
-    {
-        var player = state.Players[actorId];
-        if (player.Hand.Count <= 0)
-        {
-            return;
-        }
-
-        var playedCard = player.Hand[0];
-        player.Hand.RemoveAt(0);
-        player.PlayZone.Add(playedCard);
-    }
-
-    private static void RunStepResolve(GameState state, Guid actorId)
-    {
-        var actor = state.Players[actorId];
-
-        foreach (var opponentId in state.PlayerOrder.Where(playerId => playerId != actorId))
-        {
-            var totalPower = actor.PlayZone.Sum(card => card.Power);
-            state.Players[opponentId].Health -= totalPower;
-        }
-    }
-
-    private static void RunStepDiscard(GameState state, Guid actorId)
-    {
-        var actor = state.Players[actorId];
-        actor.Discard.AddRange(actor.PlayZone);
-        actor.PlayZone.Clear();
     }
 
     private static void AdvanceTurn(GameState state)
@@ -223,7 +193,7 @@ public class GameLoopService
                     Stamina = opponent.Stamina,
                     Strength = opponent.Strength,
                     Speed = opponent.Speed,
-                    Energy = opponent.Energy,
+                    Energy = state.SharedEnergy.GetEnergy(playerId),
                     HandCount = opponent.Hand.Count,
                     PlayZone = opponent.PlayZone.ToList(),
                     PrimaryDeckCount = opponent.PrimaryCombatDeck.Count,
@@ -239,13 +209,15 @@ public class GameLoopService
             TurnNumber = state.TurnNumber,
             Phase = state.Phase,
             CurrentPlayerId = state.CurrentPlayerId,
+            IsGameOver = state.IsGameOver,
+            WinnerId = state.WinnerId,
             You = new PublicPlayerState
             {
                 Health = viewer.Health,
                 Stamina = viewer.Stamina,
                 Strength = viewer.Strength,
                 Speed = viewer.Speed,
-                Energy = viewer.Energy,
+                Energy = state.SharedEnergy.GetEnergy(viewerId),
                 Hand = viewer.Hand.ToList(),
                 PlayZone = viewer.PlayZone.ToList(),
                 PrimaryDeckCount = viewer.PrimaryCombatDeck.Count,
