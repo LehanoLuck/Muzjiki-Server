@@ -29,10 +29,9 @@ public class GameState
     public Dictionary<Guid, PlayerGameState> Players { get; init; } = new();
     public int CurrentPlayerIndex { get; set; }
     public int TurnNumber { get; set; } = 1;
-    public TurnPhase Phase { get; set; } = TurnPhase.Draw;
+    public string Phase { get; set; } = "draw";
     public bool IsGameOver { get; set; }
     public Guid? WinnerId { get; set; }
-    public SharedEnergyState SharedEnergy { get; init; } = new();
 
     public Guid CurrentPlayerId => PlayerOrder[CurrentPlayerIndex];
 

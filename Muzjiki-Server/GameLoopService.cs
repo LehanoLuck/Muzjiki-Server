@@ -92,7 +92,6 @@ public class GameLoopService
         Console.WriteLine($"Match created: {string.Join(" vs ", gameSession.PlayerConnectionIds)}");
 
         _combatEngine.TryDrawCard(gameSession.InitialState, gameSession.InitialState.CurrentPlayerId);
-        gameSession.InitialState.Phase = TurnPhase.Play;
         await BroadcastStateSyncAsync(gameSession.InitialState, EnvelopeTypes.GameStart, cancellationToken);
     }
 
@@ -122,11 +121,6 @@ public class GameLoopService
 
         if (gameState is null || gameState.IsGameOver || gameState.CurrentPlayerId != actorId)
         {
-            return;
-        }
-
-        if (!IsActionAllowedInCurrentPhase(gameState, envelopeType))
-        {
             await BroadcastStateSyncAsync(gameState, EnvelopeTypes.GameStateSync, cancellationToken);
             return;
         }
@@ -135,23 +129,23 @@ public class GameLoopService
         {
             case EnvelopeTypes.DrawCard:
                 _combatEngine.TryDrawCard(gameState, actorId);
-                gameState.Phase = TurnPhase.Play;
+                gameState.Phase = "play";
                 break;
             case EnvelopeTypes.PlayCard:
                 _combatEngine.TryPlayCard(gameState, actorId);
-                gameState.Phase = TurnPhase.Resolve;
+                gameState.Phase = "resolve";
                 break;
             case EnvelopeTypes.EndTurn:
                 _combatEngine.ResolveAndDiscard(gameState, actorId);
                 _combatEngine.CheckGameEnd(gameState);
                 if (gameState.IsGameOver)
                 {
-                    gameState.Phase = TurnPhase.Finished;
+                    gameState.Phase = "finished";
                     break;
                 }
                 AdvanceTurn(gameState);
                 _combatEngine.TryDrawCard(gameState, gameState.CurrentPlayerId);
-                gameState.Phase = TurnPhase.Play;
+                gameState.Phase = "play";
                 break;
         }
 
